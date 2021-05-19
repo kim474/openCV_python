@@ -1,10 +1,14 @@
 import cv2
 import numpy as np
 import matplotlib.pyplot as plt
+import time
 
-yoloClass_id = ""
-cvClass_id = ""
+yoloClass_ids = []
+yoloClass_id = []
+cvClass_id = []
 name = 1
+i = 0
+j = 0
 
 cam = cv2.VideoCapture(0)
 cam.set(3, 1280)
@@ -65,17 +69,27 @@ while True:
                 boxes.append([x, y, dw, dh])
                 confidences.append(float(confidence))
                 class_ids.append(class_id)
-                print(class_id)
-                yoloClass_id = str(class_id)
+            elif 0.5 > confidence > 0.48:
+                print("detection fail")
+                cv2.imwrite("../test_capture" + str(name) + ".jpg", frame)
+                name += 1
 
             """
             else:
                 cv2.imwrite("../test_capture" + str(name) + ".jpg", frame)
                 time.sleep(5)
-                name += 1 """
+                name += 1"""
+
+    for i in range(0, len(class_ids)):
+        yoloClass_ids.append(int(class_ids[0]))
+        if yoloClass_ids[j-1] != yoloClass_ids[j]:
+            #print(yoloClass_ids[j-1])
+            yoloClass_id.append(yoloClass_ids[j-1])
+            print(yoloClass_id)
+
+        j += 1
 
     indexes = cv2.dnn.NMSBoxes(boxes, confidences, 0.5, 0.4)
-
     font = cv2.FONT_HERSHEY_PLAIN
     for i in range(len(boxes)):
         if i in indexes:
@@ -88,7 +102,9 @@ while True:
 
     if cv2.waitKey(100) > 0:
         break
+cam.release()
 
+"""
 img1 = cv2.imread("../test_rb2.jpg")
 img2 = cv2.imread("../test_bar1.jpg")
 #img3 = cv2.imread("../test_capture." + str(name) + "jpg")
@@ -147,6 +163,7 @@ else:
     print("NO RESULT")
 
 plt.show()
+"""
 
 """ original compareHist
 query = hists[0]
