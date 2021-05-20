@@ -2,9 +2,14 @@ import cv2
 import numpy as np
 import matplotlib.pyplot as plt
 import time
+import UdpComms as U
 
+
+id1 = 0
+id2 = 0
 yoloClass_ids = []
 yoloClass_id = []
+yoloClass_idss = 1
 cvClass_id = []
 name = 1
 i = 0
@@ -79,6 +84,8 @@ while True:
                 cv2.imwrite("../test_capture" + str(name) + ".jpg", frame)
                 time.sleep(5)
                 name += 1"""
+    indexes = cv2.dnn.NMSBoxes(boxes, confidences, 0.5, 0.4)
+
 
     for i in range(0, len(class_ids)):
         yoloClass_ids.append(int(class_ids[0]))
@@ -86,10 +93,35 @@ while True:
             #print(yoloClass_ids[j-1])
             yoloClass_id.append(yoloClass_ids[j-1])
             print(yoloClass_id)
-
         j += 1
 
-    indexes = cv2.dnn.NMSBoxes(boxes, confidences, 0.5, 0.4)
+
+
+    """
+    for i in range(0, len(class_ids)):
+        if i == 0:
+            yoloClass_id = class_id
+        else:
+            id1 = int(class_ids[i - 1])
+            id2 = int(class_ids[i])
+            if id1 != id2:
+                yoloClass_id = int(class_ids[i])
+                # print(yoloClass_id)
+            i += 1"""
+
+    """
+    for i in range(0, len(class_ids)):
+        if i == 0:
+            yoloClass_id = int(class_ids[0])
+            print(yoloClass_id)
+        else:
+            id1 = int(class_ids[i-1])
+            id2 = int(class_ids[i])
+            if id1 != id2:
+                yoloClass_id = int(class_ids[i])
+                #print(yoloClass_id)
+            i += 1"""
+
     font = cv2.FONT_HERSHEY_PLAIN
     for i in range(len(boxes)):
         if i in indexes:
@@ -102,6 +134,12 @@ while True:
 
     if cv2.waitKey(100) > 0:
         break
+
+    sock = U.UdpComms(udpIP="192.168.35.57", portTX=8000, portRX=8001, enableRX=True, suppressWarnings=True)
+
+    while yoloClass_id != []:
+        sock.SendData('Sent from Python: ' + str(yoloClass_id))
+        time.sleep(1)
 cam.release()
 
 """
@@ -212,4 +250,3 @@ cv2.waitKey(1)
 plt.plot(hist)
 plt.show()
 """
-
