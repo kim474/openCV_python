@@ -9,11 +9,13 @@ id1 = 0
 id2 = 0
 yoloClass_ids = []
 yoloClass_id = []
-yoloClass_idss = 1
+yoloClass_idss = 0
 cvClass_id = []
 name = 1
 i = 0
 j = 0
+k = 0
+yol = 0
 
 cam = cv2.VideoCapture(0)
 cam.set(3, 1280)
@@ -86,16 +88,26 @@ while True:
                 name += 1"""
     indexes = cv2.dnn.NMSBoxes(boxes, confidences, 0.5, 0.4)
 
-
     for i in range(0, len(class_ids)):
         yoloClass_ids.append(int(class_ids[0]))
         if yoloClass_ids[j-1] != yoloClass_ids[j]:
             #print(yoloClass_ids[j-1])
-            yoloClass_id.append(yoloClass_ids[j-1])
+            yoloClass_id.append(yoloClass_ids[j])
             print(yoloClass_id)
+
+
+            for k in range(0, len(yoloClass_id)):
+                yol = len(yoloClass_id)
+                k += 1
+            #print(yoloClass_id[yol-1])
+            yoloClass_idss = yoloClass_id[yol-1]
+            print(yoloClass_idss)
+
+            sock = U.UdpComms(udpIP="192.168.35.57", portTX=8000, portRX=8001, enableRX=True, suppressWarnings=True)
+            sock.SendData('Sent from Python: ' + str(yoloClass_idss))
+            time.sleep(i + 1)
+
         j += 1
-
-
 
     """
     for i in range(0, len(class_ids)):
@@ -135,11 +147,12 @@ while True:
     if cv2.waitKey(100) > 0:
         break
 
+    """
     sock = U.UdpComms(udpIP="192.168.35.57", portTX=8000, portRX=8001, enableRX=True, suppressWarnings=True)
 
-    while yoloClass_id != []:
-        sock.SendData('Sent from Python: ' + str(yoloClass_id))
-        time.sleep(1)
+    sock.SendData('Sent from Python: ' + str(yoloClass_id))
+    time.sleep(1)"""
+
 cam.release()
 
 """
@@ -250,3 +263,4 @@ cv2.waitKey(1)
 plt.plot(hist)
 plt.show()
 """
+
