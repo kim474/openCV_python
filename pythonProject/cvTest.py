@@ -4,6 +4,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 import time
 import UdpComms as U
+import random
 
 yoloClass_ids = []
 yoloClass_id = []
@@ -62,11 +63,11 @@ while True:
             elif 0.8 > confidence > 0.78:
                 print("detection fail, start openCV")
                 cv2.imwrite("../test_capture" + str(name) + ".jpg", frame)
-                name += 1
 
                 img1 = cv2.imread("../test_r3.jpg")
-                img2 = cv2.imread("../test5.jpg")
+                img2 = cv2.imread("../test_capture" + str(name) + ".jpg")
                 #img2 = cv2.imread("../test_capture" + str(name) + ".jpg")
+                name += 1
 
                 imgs = [img1, img2]
                 hists = []
@@ -117,13 +118,18 @@ while True:
 
                 if count >= 3:
                     print("!!!this is PET!!!")
-                    cvClass_id = 0
-                    sock = U.UdpComms(udpIP="192.168.35.57", portTX=8000, portRX=8001, enableRX=True,
+                    yoloClass_idss = 0
+                    sock = U.UdpComms(udpIP="192.168.1.102", portTX=8000, portRX=8001, enableRX=True,
                                       suppressWarnings=True)
-                    sock.SendData('Sent from Python CV: ' + str(cvClass_id))
+                    sock.SendData('Sent from Python CV: ' + str(yoloClass_idss))
                     time.sleep(i + 1)
                 else:
                     print("NO RESULT")
+                    yoloClass_idss = random.randint(0, 26)
+                    sock = U.UdpComms(udpIP="192.168.1.102", portTX=8000, portRX=8001, enableRX=True,
+                                      suppressWarnings=True)
+                    sock.SendData('Sent from Python CV fail: ' + str(yoloClass_idss))
+                    time.sleep(i + 1)
 
                 #plt.show()
 
@@ -143,7 +149,7 @@ while True:
             yoloClass_idss = yoloClass_id[yol-1]
             print(yoloClass_idss)
 
-            sock = U.UdpComms(udpIP="192.168.35.57", portTX=8000, portRX=8001, enableRX=True, suppressWarnings=True)
+            sock = U.UdpComms(udpIP="192.168.1.102", portTX=8000, portRX=8001, enableRX=True, suppressWarnings=True)
             sock.SendData('Sent from Python: ' + str(yoloClass_idss))
             time.sleep(i + 1)
 
