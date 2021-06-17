@@ -8,7 +8,6 @@ import random
 yoloClass_ids = []
 yoloClass_id = []
 yoloClass_idss = 0
-cvClass_id = 0
 name = 1
 i = 0
 j = 0
@@ -28,6 +27,7 @@ output_layers = [layer_names[i[0] - 1] for i in net.getUnconnectedOutLayers()]
 colors = np.random.uniform(0, 255, size=(len(classes), 3))
 
 while True:
+    sock = U.UdpComms(udpIP="192.168.35.254", portTX=8000, portRX=8001, enableRX=True, suppressWarnings=True)
     ret, frame = cam.read()
     h, w, c = frame.shape
 
@@ -108,7 +108,10 @@ while True:
                     if gCount >= 4:
                         if yoloClass_idss != 18:
                             yoloClass_idss = 18
+                            print("1여기")
                             print(yoloClass_idss)
+                            sock.SendData(str(yoloClass_idss))
+                            time.sleep(i + 1)
                     else:
                         # paper plate test
                         name -= 1
@@ -150,7 +153,10 @@ while True:
                         if pCount >= 4:
                             if yoloClass_idss != 19:
                                 yoloClass_idss = 19
+                                print("2여기")
                                 print(yoloClass_idss)
+                                sock.SendData(str(yoloClass_idss))
+                                time.sleep(i + 1)
                         else:
                             # plastic plate test
                             name -= 1
@@ -192,7 +198,10 @@ while True:
                             if ppCount >= 3:
                                 if yoloClass_idss != 20:
                                     yoloClass_idss = 20
+                                    print("3여기")
                                     print(yoloClass_idss)
+                                    sock.SendData(str(yoloClass_idss))
+                                    time.sleep(i + 1)
                             else:
                                 #print("NO MATCHES WERE FOUND")
                                 yoloClass_idss = random.randint(1, 26)
@@ -204,7 +213,10 @@ while True:
             if len(yoloClass_ids) == 1:
                 yoloClass_ids[0] = class_ids[0]
                 yoloClass_idss = yoloClass_ids[0]
-                print(yoloClass_idss)
+                if yoloClass_idss != 10:
+                    print(yoloClass_idss)
+                    sock.SendData(str(yoloClass_idss))
+                    time.sleep(i + 1)
             else:
                 if yoloClass_ids[j - 1] != yoloClass_ids[j]:
                     # print(yoloClass_ids[j-1])
@@ -217,13 +229,11 @@ while True:
                     # print(yoloClass_id[yol-1])
                     yoloClass_idss = yoloClass_id[yol - 1]
                     if yoloClass_idss != 10:
+                        print("4여기")
                         print(yoloClass_idss)
-                    """
-                    sock = U.UdpComms(udpIP="", portTX=8000, portRX=8001, enableRX=True,
-                                      suppressWarnings=True)
-                    sock.SendData(str(yoloClass_idss))
-                    time.sleep(i + 1)
-                    """
+                        sock.SendData(str(yoloClass_idss))
+                        time.sleep(i + 1)
+
             j += 1
 
     font = cv2.FONT_HERSHEY_PLAIN
