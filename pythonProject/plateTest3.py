@@ -3,7 +3,6 @@ import numpy as np
 import matplotlib.pyplot as plt
 import time
 import UdpComms as U
-import random
 
 yoloClass_ids = []
 yoloClass_id = []
@@ -60,6 +59,7 @@ while True:
                 confidences.append(float(confidence))
                 class_ids.append(class_id)
 
+                #yolo에서 검출한 class_id가 10이라면, 재질 판단 시작
                 if class_id == 10:
                     cv2.imwrite("../test_capture" + str(name) + ".jpg", frame)
 
@@ -106,6 +106,7 @@ while True:
                         gCount += 1
 
                     if gCount >= 4:
+                        #glass plate가 맞다면, class_id로 18을 넘겨줌
                         if yoloClass_idss != 18:
                             yoloClass_idss = 18
                             print("1여기")
@@ -113,44 +114,45 @@ while True:
                             sock.SendData(str(yoloClass_idss))
                             time.sleep(i + 1)
                     else:
-                        # paper plate test
+                        # plastic plate test
                         name -= 1
-                        paperImg = cv2.imread("../paper_plate1.jpg")
-                        test4 = cv2.imread("../test_capture" + str(name) + ".jpg")
+                        plasticImg = cv2.imread("../plastic_plate1.jpg")
+                        test5 = cv2.imread("../test_capture" + str(name) + ".jpg")
                         name += 1
 
-                        paperTest = [paperImg, test4]
-                        pHists = []
-                        pCount = 0
+                        plasticTest = [plasticImg, test5]
+                        ppHists = []
+                        ppCount = 0
                         i = 0
 
-                        for i, pImg in enumerate(paperTest):
-                            pHist = cv2.calcHist([pImg], [0], None, [256], [0, 256])
+                        for i, ppImg in enumerate(plasticTest):
+                            ppHist = cv2.calcHist([ppImg], [0], None, [256], [0, 256])
 
-                            cv2.normalize(pHist, pHist, 0, 1, cv2.NORM_MINMAX)
-                            pHists.append(pHist)
+                            cv2.normalize(ppHist, ppHist, 0, 1, cv2.NORM_MINMAX)
+                            ppHists.append(ppHist)
 
-                        pHist1 = pHists[0]
-                        pHist2 = pHists[1]
+                        ppHist1 = ppHists[0]
+                        ppHist2 = ppHists[1]
 
-                        pResult1 = cv2.compareHist(pHist1, pHist2, cv2.HISTCMP_CORREL)
-                        if pResult1 > 0.99:
-                            pCount += 1
+                        ppResult1 = cv2.compareHist(ppHist1, ppHist2, cv2.HISTCMP_CORREL)
+                        if ppResult1 > 0.98:
+                            ppCount += 1
 
-                        pResult2 = cv2.compareHist(pHist1, pHist2, cv2.HISTCMP_CHISQR)
-                        if pResult2 < 0.3:
-                            pCount += 1
+                        ppResult2 = cv2.compareHist(ppHist1, ppHist2, cv2.HISTCMP_CHISQR)
+                        if (1 < ppResult2) & (ppResult2 < 3.5):
+                            ppCount += 1
 
-                        pResult3 = cv2.compareHist(pHist1, pHist2, cv2.HISTCMP_INTERSECT)
-                        pResult3 = pResult3 / np.sum(pHist1)
-                        if pResult3 >= 0.9:
-                            pCount += 1
+                        ppResult3 = cv2.compareHist(ppHist1, ppHist2, cv2.HISTCMP_INTERSECT)
+                        ppResult3 = ppResult3 / np.sum(ppHist1)
+                        if ppResult3 > 0.83:
+                            ppCount += 1
 
-                        pResult4 = cv2.compareHist(pHist1, pHist2, cv2.HISTCMP_BHATTACHARYYA)
-                        if pResult4 < 0.16:
-                            pCount += 1
+                        ppResult4 = cv2.compareHist(ppHist1, ppHist2, cv2.HISTCMP_BHATTACHARYYA)
+                        if ppResult4 < 0.24:
+                            ppCount += 1
 
-                        if pCount >= 4:
+                        if ppCount >= 3:
+                            # plastic plate가 맞다면, class_id로 19을 넘겨줌
                             if yoloClass_idss != 19:
                                 yoloClass_idss = 19
                                 print("2여기")
@@ -158,53 +160,13 @@ while True:
                                 sock.SendData(str(yoloClass_idss))
                                 time.sleep(i + 1)
                         else:
-                            # plastic plate test
-                            name -= 1
-                            plasticImg = cv2.imread("../plastic_plate1.jpg")
-                            test5 = cv2.imread("../test_capture" + str(name) + ".jpg")
-                            name += 1
+                            # glass, plastic 모두 아니라면, class_id로 10을 넘겨줌
+                            if yoloClass_idss != 10:
+                                yoloClass_idss = 10
+                                print(yoloClass_idss)
+                                sock.SendData(str(yoloClass_idss))
+                                time.sleep(i + 1)
 
-                            plasticTest = [plasticImg, test5]
-                            ppHists = []
-                            ppCount = 0
-                            i = 0
-
-                            for i, ppImg in enumerate(plasticTest):
-                                ppHist = cv2.calcHist([ppImg], [0], None, [256], [0, 256])
-
-                                cv2.normalize(ppHist, ppHist, 0, 1, cv2.NORM_MINMAX)
-                                ppHists.append(ppHist)
-
-                            ppHist1 = ppHists[0]
-                            ppHist2 = ppHists[1]
-
-                            ppResult1 = cv2.compareHist(ppHist1, ppHist2, cv2.HISTCMP_CORREL)
-                            if ppResult1 > 0.98:
-                                ppCount += 1
-
-                            ppResult2 = cv2.compareHist(ppHist1, ppHist2, cv2.HISTCMP_CHISQR)
-                            if (1 < ppResult2) & (ppResult2 < 3.5):
-                                ppCount += 1
-
-                            ppResult3 = cv2.compareHist(ppHist1, ppHist2, cv2.HISTCMP_INTERSECT)
-                            ppResult3 = ppResult3 / np.sum(ppHist1)
-                            if ppResult3 > 0.83:
-                                ppCount += 1
-
-                            ppResult4 = cv2.compareHist(ppHist1, ppHist2, cv2.HISTCMP_BHATTACHARYYA)
-                            if ppResult4 < 0.24:
-                                ppCount += 1
-
-                            if ppCount >= 3:
-                                if yoloClass_idss != 20:
-                                    yoloClass_idss = 20
-                                    print("3여기")
-                                    print(yoloClass_idss)
-                                    sock.SendData(str(yoloClass_idss))
-                                    time.sleep(i + 1)
-                            else:
-                                #print("NO MATCHES WERE FOUND")
-                                yoloClass_idss = random.randint(1, 26)
         indexes = cv2.dnn.NMSBoxes(boxes, confidences, 0.5, 0.4)
 
     for i in range(0, len(class_ids)):
@@ -228,8 +190,9 @@ while True:
                         k += 1
                     # print(yoloClass_id[yol-1])
                     yoloClass_idss = yoloClass_id[yol - 1]
+                    # yolo에서 검출한 class_id가 10이 아니라면, 그냥 class_id를 보냄
                     if yoloClass_idss != 10:
-                        print("4여기")
+                        print("3여기")
                         print(yoloClass_idss)
                         sock.SendData(str(yoloClass_idss))
                         time.sleep(i + 1)
