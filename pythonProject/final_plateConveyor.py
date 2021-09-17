@@ -7,6 +7,8 @@ import UdpComms as U
 yoloClass_ids = []
 yoloClass_id = []
 yoloClass_idss = 0
+cvClass_ids1 = 0
+cvClass_ids2 = 0
 name = 1
 i = 0
 j = 0
@@ -26,7 +28,7 @@ output_layers = [layer_names[i[0] - 1] for i in net.getUnconnectedOutLayers()]
 colors = np.random.uniform(0, 255, size=(len(classes), 3))
 
 while True:
-    sock = U.UdpComms(udpIP="192.168.35.254", portTX=8000, portRX=8001, enableRX=True, suppressWarnings=True)
+    sock = U.UdpComms(udpIP="192.168.0.104", portTX=8000, portRX=8001, enableRX=True, suppressWarnings=True)
     ret, frame = cam.read()
     h, w, c = frame.shape
 
@@ -89,27 +91,27 @@ while True:
                     gHist2 = gHists[1]
 
                     gResult1 = cv2.compareHist(gHist1, gHist2, cv2.HISTCMP_CORREL)
-                    if gResult1 > 0.99:
+                    if gResult1 > 0.97:
                         gCount += 1
 
                     gResult2 = cv2.compareHist(gHist1, gHist2, cv2.HISTCMP_CHISQR)
-                    if gResult2 < 3:
+                    if gResult2 > 15:
                         gCount += 1
 
                     gResult3 = cv2.compareHist(gHist1, gHist2, cv2.HISTCMP_INTERSECT)
                     gResult3 = gResult3 / np.sum(gHist1)
-                    if gResult3 >= 0.79:
+                    if gResult3 > 0.79:
                         gCount += 1
 
                     gResult4 = cv2.compareHist(gHist1, gHist2, cv2.HISTCMP_BHATTACHARYYA)
-                    if gResult4 < 0.26:
+                    if gResult4 <= 0.35:
                         gCount += 1
 
-                    if gCount >= 4:
+                    if gCount >= 3:
                         #glass plate가 맞다면, class_id로 18을 넘겨줌
                         if yoloClass_idss != 18:
                             yoloClass_idss = 18
-                            print("1여기")
+                            #print("1여기")
                             print(yoloClass_idss)
                             sock.SendData(str(yoloClass_idss))
                             time.sleep(i + 1)
@@ -135,37 +137,45 @@ while True:
                         ppHist2 = ppHists[1]
 
                         ppResult1 = cv2.compareHist(ppHist1, ppHist2, cv2.HISTCMP_CORREL)
-                        if ppResult1 > 0.98:
+
+                        if ppResult1 > 0.9:
                             ppCount += 1
 
                         ppResult2 = cv2.compareHist(ppHist1, ppHist2, cv2.HISTCMP_CHISQR)
-                        if (1 < ppResult2) & (ppResult2 < 3.5):
+
+                        if (0 < ppResult2) & (ppResult2 < 3.5):
                             ppCount += 1
 
                         ppResult3 = cv2.compareHist(ppHist1, ppHist2, cv2.HISTCMP_INTERSECT)
                         ppResult3 = ppResult3 / np.sum(ppHist1)
+
                         if ppResult3 > 0.83:
                             ppCount += 1
 
                         ppResult4 = cv2.compareHist(ppHist1, ppHist2, cv2.HISTCMP_BHATTACHARYYA)
-                        if ppResult4 < 0.24:
+
+                        if ppResult4 < 0.3:
                             ppCount += 1
 
                         if ppCount >= 3:
                             # plastic plate가 맞다면, class_id로 19을 넘겨줌
                             if yoloClass_idss != 19:
                                 yoloClass_idss = 19
-                                print("2여기")
+                                #print("2여기")
                                 print(yoloClass_idss)
                                 sock.SendData(str(yoloClass_idss))
                                 time.sleep(i + 1)
                         else:
+                            cvClass_ids2 = 19
                             # glass, plastic 모두 아니라면, class_id로 10을 넘겨줌
                             if yoloClass_idss != 10:
-                                yoloClass_idss = 10
-                                print(yoloClass_idss)
-                                sock.SendData(str(yoloClass_idss))
-                                time.sleep(i + 1)
+                                if yoloClass_idss != 18:
+                                    if yoloClass_idss != 19:
+                                        yoloClass_idss = 10
+                                        #print("3여기")
+                                        print(yoloClass_idss)
+                                        sock.SendData(str(yoloClass_idss))
+                                        time.sleep(i + 1)
 
         indexes = cv2.dnn.NMSBoxes(boxes, confidences, 0.5, 0.4)
 
@@ -192,7 +202,7 @@ while True:
                     yoloClass_idss = yoloClass_id[yol - 1]
                     # yolo에서 검출한 class_id가 10이 아니라면, 그냥 class_id를 보냄
                     if yoloClass_idss != 10:
-                        print("3여기")
+                        #print("4여기")
                         print(yoloClass_idss)
                         sock.SendData(str(yoloClass_idss))
                         time.sleep(i + 1)

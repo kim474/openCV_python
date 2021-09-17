@@ -4,6 +4,8 @@ import time
 import UdpComms as U
 import socket
 import sys
+from timeit import default_timer as timer
+from datetime import timedelta
 
 ids = []
 idss = []
@@ -13,6 +15,8 @@ i = 0
 j = 0
 k = 0
 send_id = 0
+start = 0.0
+end = 0.0
 
 HOST = ''
 PORT = 8888
@@ -53,7 +57,7 @@ output_layers = [layer_names[i[0] - 1] for i in net.getUnconnectedOutLayers()]
 colors = np.random.uniform(0, 255, size=(len(classes), 3))
 
 while True:
-    sock = U.UdpComms(udpIP="192.168.35.62", portTX=8000, portRX=8001, enableRX=True, suppressWarnings=True)
+    sock = U.UdpComms(udpIP="192.168.0.104", portTX=8000, portRX=8001, enableRX=True, suppressWarnings=True)
     ret, frame = cam.read()
     h, w, c = frame.shape
 
@@ -73,6 +77,7 @@ while True:
             class_id = np.argmax(scores)
             confidence = scores[class_id]
 
+            end = timer()
             if confidence > 0.8:
                 # Object detected
                 center_x = int(detection[0] * w)
@@ -90,11 +95,11 @@ while True:
                 k += 1
                 ids.append(class_id)
                 # print(ids)
-                if ids[k-1] != ids[k]:
-                    idss.append(ids[k])
-                    # print('idss', idss)
+
+                if t2 >= timedelta(seconds=3):
+                    # print(ids[k])
                     # yolo에서 검출한 class_id가 1이라면, 라즈베리로 신호 전달
-                    if idss[j] == 1:
+                    if ids[k] == 1:
                         # 5. send "1"
                         sendData = "1"
                         conn.sendall(sendData.encode())
@@ -110,6 +115,7 @@ while True:
                             send_id = int(recvData.decode())
                             if send_id == 20:  # plastic_bottle class_id = 20
                                 print('Received & Send to Unity: ', send_id)
+
                                 sock.SendData(str(send_id))
                                 time.sleep(i + 1)
                             elif send_id == 21:  # glass_bottle class_id = 21
@@ -117,12 +123,12 @@ while True:
                                 sock.SendData(str(send_id))
                                 time.sleep(i + 1)
                     else:
-                        if (idss[j] != 0) and (idss[j] != 1):
-                            print('Send to Unity: ', idss[j])
-                            sock.SendData(str(idss[j]))
+                        if (ids[k] != 0) and (ids[k] != 1):
+                            print('Send to Unity: ', ids[k])
+                            sock.SendData(str(ids[k]))
                             time.sleep(i + 1)
-                    j += 1
-
+                start = timer()
+            t2 = timedelta(seconds=end - start)
         indexes = cv2.dnn.NMSBoxes(boxes, confidences, 0.5, 0.4)
 
     font = cv2.FONT_HERSHEY_PLAIN
