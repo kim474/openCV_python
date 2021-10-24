@@ -28,7 +28,7 @@ output_layers = [layer_names[i[0] - 1] for i in net.getUnconnectedOutLayers()]
 colors = np.random.uniform(0, 255, size=(len(classes), 3))
 
 while True:
-    sock = U.UdpComms(udpIP="192.168.0.104", portTX=8000, portRX=8001, enableRX=True, suppressWarnings=True)
+    sock = U.UdpComms(udpIP="192.168.0.101", portTX=8000, portRX=8001, enableRX=True, suppressWarnings=True)
     ret, frame = cam.read()
     h, w, c = frame.shape
 
