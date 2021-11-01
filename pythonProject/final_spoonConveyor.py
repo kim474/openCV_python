@@ -1,27 +1,19 @@
 import cv2
 import numpy as np
-import matplotlib.pyplot as plt
 import time
 import UdpComms as U
 
 yoloClass_ids = []
 yoloClass_id = []
-yoloClass_idss = 0
-cvClass_ids1 = 0
-cvClass_ids2 = 0
-name = 1
+yoloClass_idss = 32
 i = 0
 j = 0
 k = 0
 yol = 0
 
-prev_time = 0
-FPS = 10
-
 cam = cv2.VideoCapture(2)
 cam.set(3, 480)
 cam.set(4, 480)
-cam.set(5, 1)
 
 net = cv2.dnn.readNet("../yolov4-obj.weights", "../yolov4-obj.cfg")
 classes = []
@@ -32,26 +24,21 @@ output_layers = [layer_names[i[0] - 1] for i in net.getUnconnectedOutLayers()]
 colors = np.random.uniform(0, 255, size=(len(classes), 3))
 
 while True:
-    sock = U.UdpComms(udpIP="192.168.35.3", portTX=8000, portRX=8001, enableRX=True, suppressWarnings=True)
-    #current_time = time.time() - prev_time
+    sock = U.UdpComms(udpIP="192.168.0.12", portTX=8000, portRX=8001, enableRX=True, suppressWarnings=True)
     ret, frame = cam.read()
-    #if (ret is True) and (current_time > 1./FPS):
-    #    prev_time = time.time()
-    #    h, w, c = frame.shape
     h, w, c = frame.shape
 
-    # Detecting objects
+    # detecting objects
     blob = cv2.dnn.blobFromImage(frame, 0.00392, (416, 416), (0, 0, 0), True, crop=False)
     net.setInput(blob)
     outs = net.forward(output_layers)
 
-    # 정보를 화면에 표시
+    # showing info
     class_ids = []
     confidences = []
     boxes = []
     for out in outs:
         for detection in out:
-
             scores = detection[5:]
             class_id = np.argmax(scores)
             confidence = scores[class_id]
@@ -62,203 +49,194 @@ while True:
                 center_y = int(detection[1] * h)
                 dw = int(detection[2] * w)
                 dh = int(detection[3] * h)
-                # 좌표
+                # coordinates of boxes
                 x = int(center_x - dw / 2)
                 y = int(center_y - dh / 2)
                 boxes.append([x, y, dw, dh])
                 confidences.append(float(confidence))
                 class_ids.append(class_id)
 
-                # class_id == 12 즉, spoon이라면 재질 판단 시작
-                if class_id == 12:
-                    # frame capture
-                    cv2.imwrite("../test_capture" + str(name) + ".jpg", frame)
-
-                    # image processing
-                    capImg = cv2.imread("../test_capture" + str(name) + ".jpg")
-                    crop = capImg[45:435, 0:480].copy()
+                # class_ids[2]가 12일때 start image processing; 너무 여러번 진행하지 않도록 하기 위해 [2]로 진행
+                if len(class_ids) > 2 and class_ids[2] == 12:
+                    crop = frame[45:435, 0:480].copy()
                     gray = cv2.cvtColor(crop, cv2.COLOR_BGR2GRAY)
                     blur = cv2.GaussianBlur(gray, (5, 5), 0)
-                    cv2.imwrite("../test_capture" + str(name) + ".jpg", blur)
 
-                    # metal spoon test
-                    metalImg = cv2.imread("../w1_l6.jpg")
-                    mTest = cv2.imread("../test_capture" + str(name) + ".jpg")
-                    name += 1
+                    # 검출한 class_id가 12면 재질판단 시작
+                    if len(class_ids) != 0 and class_ids[0] == 12:
+                        # start metal spoon test
+                        metalImg = cv2.imread("../w1_l6.jpg")
+                        mTest = blur
 
-                    metalTest = [metalImg, mTest]
-                    mHists = []
-                    mCount = 0
-                    i = 0
-
-                    for i, mImg in enumerate(metalTest):
-                        mHist = cv2.calcHist([mImg], [0], None, [256], [0, 256])
-
-                        cv2.normalize(mHist, mHist, 0, 1, cv2.NORM_MINMAX)
-                        mHists.append(mHist)
-
-                    mHist1 = mHists[0]
-                    mHist2 = mHists[1]
-
-                    mResult1 = cv2.compareHist(mHist1, mHist2, cv2.HISTCMP_CORREL)
-                    if 0.9 > mResult1 > 0.8:
-                        mCount += 1
-
-                    mResult2 = cv2.compareHist(mHist1, mHist2, cv2.HISTCMP_CHISQR)
-                    if mResult2 > 60:
-                        mCount += 1
-
-                    mResult3 = cv2.compareHist(mHist1, mHist2, cv2.HISTCMP_INTERSECT)
-                    mResult3 = mResult3 / np.sum(mHist1)
-                    if 0.9 > mResult3 > 0.83:
-                        mCount += 1
-
-                    mResult4 = cv2.compareHist(mHist1, mHist2, cv2.HISTCMP_BHATTACHARYYA)
-                    if 0.1 < mResult4 < 0.2:
-                        mCount += 1
-                    """
-                    print('1번', mResult1)
-                    print('2번', mResult2)
-                    print('3번', mResult3)
-                    print('4번', mResult4)
-                    
-                    print('mCount: ', mCount)
-                    """
-                    if mCount >= 3:
-                        # metal spoon이 맞다면, class_id로 30을 넘겨줌
-                        if yoloClass_idss != 30:
-                            yoloClass_idss = 30
-                            #print("1여기")
-                            print('metal spoon', yoloClass_idss)
-                            sock.SendData(str(yoloClass_idss))
-                            time.sleep(i + 1)
-                    else:
-                        # plastic spoon test
-                        name -= 1
-                        plasticImg = cv2.imread("../p1_l6.jpg")
-                        pTest = cv2.imread("../test_capture" + str(name) + ".jpg")
-                        name += 1
-
-                        plasticTest = [plasticImg, pTest]
-                        pHists = []
-                        pCount = 0
+                        metalTest = [metalImg, mTest]
+                        mHists = []
+                        mCount = 0
                         i = 0
 
-                        for i, pImg in enumerate(plasticTest):
-                            pHist = cv2.calcHist([pImg], [0], None, [256], [0, 256])
+                        for i, mImg in enumerate(metalTest):
+                            mHist = cv2.calcHist([mImg], [0], None, [256], [0, 256])
 
-                            cv2.normalize(pHist, pHist, 0, 1, cv2.NORM_MINMAX)
-                            pHists.append(pHist)
+                            cv2.normalize(mHist, mHist, 0, 1, cv2.NORM_MINMAX)
+                            mHists.append(mHist)
 
-                        pHist1 = pHists[0]
-                        pHist2 = pHists[1]
+                        mHist1 = mHists[0]
+                        mHist2 = mHists[1]
 
-                        pResult1 = cv2.compareHist(pHist1, pHist2, cv2.HISTCMP_CORREL)
+                        mResult1 = cv2.compareHist(mHist1, mHist2, cv2.HISTCMP_CORREL)
+                        if 0.75 < mResult1 < 0.82:
+                            mCount += 1
 
-                        if pResult1 >= 0.83:
-                            pCount += 1
+                        mResult2 = cv2.compareHist(mHist1, mHist2, cv2.HISTCMP_CHISQR)
+                        if 22 < mResult2 < 25:
+                            mCount += 1
 
-                        pResult2 = cv2.compareHist(pHist1, pHist2, cv2.HISTCMP_CHISQR)
+                        mResult3 = cv2.compareHist(mHist1, mHist2, cv2.HISTCMP_INTERSECT)
+                        mResult3 = mResult3 / np.sum(mHist1)
+                        if 0.67 < mResult3 < 0.70:
+                            mCount += 1
 
-                        if 15 < pResult2 < 25:
-                            pCount += 1
-
-                        pResult3 = cv2.compareHist(pHist1, pHist2, cv2.HISTCMP_INTERSECT)
-                        pResult3 = pResult3 / np.sum(pHist1)
-
-                        if pResult3 <= 0.8:
-                            pCount += 1
-
-                        pResult4 = cv2.compareHist(pHist1, pHist2, cv2.HISTCMP_BHATTACHARYYA)
-
-                        if pResult4 <= 0.19:
-                            pCount += 1
+                        mResult4 = cv2.compareHist(mHist1, mHist2, cv2.HISTCMP_BHATTACHARYYA)
+                        if 0.21 < mResult4 < 0.25:
+                            mCount += 1
                         """
-                        print('1번', pResult1)
-                        print('2번', pResult2)
-                        print('3번', pResult3)
-                        print('4번', pResult4)
+                        print('1번', mResult1)
+                        print('2번', mResult2)
+                        print('3번', mResult3)
+                        print('4번', mResult4)
 
-                        print('pCount: ', pCount)
+                        print('mCount: ', mCount)
                         """
-                        if pCount >= 3:
-                            # plastic spoon이 맞다면, class_id로 31을 넘겨줌
-                            if yoloClass_idss != 31:
-                                yoloClass_idss = 31
-                                #print("2여기")
-                                print('plastic spoon', yoloClass_idss)
+                        if mCount >= 3:
+                            # metal spoon이 맞다면, class_id로 30 전송
+                            if yoloClass_idss != 30:
+                                yoloClass_idss = 30
+                                # print("1여기")
+                                print('metal spoon', yoloClass_idss)
                                 sock.SendData(str(yoloClass_idss))
                                 time.sleep(i + 1)
                         else:
-                            # wood spoon test
-                            name -= 1
-                            woodImg = cv2.imread("../w1_l6.jpg")
-                            wTest = cv2.imread("../test_capture" + str(name) + ".jpg")
-                            name += 1
+                            # start plastic spoon test
+                            plasticImg = cv2.imread("../p1_l6.jpg")
+                            pTest = blur
 
-                            woodTest = [woodImg, wTest]
-                            wHists = []
-                            wCount = 0
+                            plasticTest = [plasticImg, pTest]
+                            pHists = []
+                            pCount = 0
                             i = 0
 
-                            for i, wImg in enumerate(woodTest):
-                                wHist = cv2.calcHist([wImg], [0], None, [256], [0, 256])
+                            for i, pImg in enumerate(plasticTest):
+                                pHist = cv2.calcHist([pImg], [0], None, [256], [0, 256])
 
-                                cv2.normalize(wHist, wHist, 0, 1, cv2.NORM_MINMAX)
-                                wHists.append(wHist)
+                                cv2.normalize(pHist, pHist, 0, 1, cv2.NORM_MINMAX)
+                                pHists.append(pHist)
 
-                            wHist1 = wHists[0]
-                            wHist2 = wHists[1]
+                            pHist1 = pHists[0]
+                            pHist2 = pHists[1]
 
-                            wResult1 = cv2.compareHist(wHist1, wHist2, cv2.HISTCMP_CORREL)
+                            pResult1 = cv2.compareHist(pHist1, pHist2, cv2.HISTCMP_CORREL)
 
-                            if wResult1 > 0.9:
-                                wCount += 1
+                            if 0.65 < pResult1 < 0.70:
+                                pCount += 1
 
-                            wResult2 = cv2.compareHist(wHist1, wHist2, cv2.HISTCMP_CHISQR)
+                            pResult2 = cv2.compareHist(pHist1, pHist2, cv2.HISTCMP_CHISQR)
 
-                            if wResult2 < 15:
-                                wCount += 1
+                            if 30 < pResult2 < 35:
+                                pCount += 1
 
-                            wResult3 = cv2.compareHist(wHist1, wHist2, cv2.HISTCMP_INTERSECT)
-                            wResult3 = wResult3 / np.sum(wHist1)
+                            pResult3 = cv2.compareHist(pHist1, pHist2, cv2.HISTCMP_INTERSECT)
+                            pResult3 = pResult3 / np.sum(pHist1)
 
-                            if wResult3 > 0.90:
-                                wCount += 1
+                            if 0.40 < pResult3 < 0.50:
+                                pCount += 1
 
-                            wResult4 = cv2.compareHist(wHist1, wHist2, cv2.HISTCMP_BHATTACHARYYA)
+                            pResult4 = cv2.compareHist(pHist1, pHist2, cv2.HISTCMP_BHATTACHARYYA)
 
-                            if wResult4 < 0.10:
-                                wCount += 1
-
+                            if 0.30 < pResult4 < 0.35:
+                                pCount += 1
                             """
-                            print('1번', wResult1)
-                            print('2번', wResult2)
-                            print('3번', wResult3)
-                            print('4번', wResult4)
-                            
-                            print('wCount: ', wCount)
+                            print('1번', pResult1)
+                            print('2번', pResult2)
+                            print('3번', pResult3)
+                            print('4번', pResult4)
+
+                            print('pCount: ', pCount)
                             """
-                            if wCount >= 3:
-                                # wood spoon이 맞다면, class_id로 32을 넘겨줌
-                                if yoloClass_idss != 32:
-                                    yoloClass_idss = 32
+                            if pCount >= 3:
+                                # plastic spoon이 맞다면, class_id로 31 전송
+                                if yoloClass_idss != 31:
+                                    yoloClass_idss = 31
                                     # print("2여기")
-                                    print('wood spoon', yoloClass_idss)
+                                    print('plastic spoon', yoloClass_idss)
                                     sock.SendData(str(yoloClass_idss))
                                     time.sleep(i + 1)
                             else:
-                                # metal, plastic, wood 모두 아니라면, class_id로 12을 넘겨줌
-                                if yoloClass_idss != 0:
-                                    if yoloClass_idss != 12:
-                                        if yoloClass_idss != 121 and yoloClass_idss != 122 and yoloClass_idss != 123:
-                                            yoloClass_idss = 12
-                                            print('??', yoloClass_idss)
-                                            sock.SendData(str(yoloClass_idss))
-                                            time.sleep(i + 1)
+                                # start wood spoon test
+                                woodImg = cv2.imread("../w1_l6.jpg")
+                                wTest = blur
+
+                                woodTest = [woodImg, wTest]
+                                wHists = []
+                                wCount = 0
+                                i = 0
+
+                                for i, wImg in enumerate(woodTest):
+                                    wHist = cv2.calcHist([wImg], [0], None, [256], [0, 256])
+
+                                    cv2.normalize(wHist, wHist, 0, 1, cv2.NORM_MINMAX)
+                                    wHists.append(wHist)
+
+                                wHist1 = wHists[0]
+                                wHist2 = wHists[1]
+
+                                wResult1 = cv2.compareHist(wHist1, wHist2, cv2.HISTCMP_CORREL)
+
+                                if 0.82 < wResult1 < 0.85:
+                                    wCount += 1
+
+                                wResult2 = cv2.compareHist(wHist1, wHist2, cv2.HISTCMP_CHISQR)
+
+                                if 27 < wResult2 < 30:
+                                    wCount += 1
+
+                                wResult3 = cv2.compareHist(wHist1, wHist2, cv2.HISTCMP_INTERSECT)
+                                wResult3 = wResult3 / np.sum(wHist1)
+
+                                if 0.9 <= wResult3 < 0.93:
+                                    wCount += 1
+
+                                wResult4 = cv2.compareHist(wHist1, wHist2, cv2.HISTCMP_BHATTACHARYYA)
+
+                                if 0.15 <= wResult4 < 0.16:
+                                    wCount += 1
+
+                                print('1번', wResult1)
+                                print('2번', wResult2)
+                                print('3번', wResult3)
+                                print('4번', wResult4)
+
+                                print('wCount: ', wCount)
+
+                                if wCount >= 3:
+                                    # wood spoon이 맞다면, class_id로 32 전송
+                                    if yoloClass_idss != 32:
+                                        yoloClass_idss = 32
+                                        # print("2여기")
+                                        print('wood spoon', yoloClass_idss)
+                                        sock.SendData(str(yoloClass_idss))
+                                        time.sleep(i + 1)
+                                else:
+                                    # 모두 아니라면, class_id로 12을 넘겨줌
+                                    if yoloClass_idss != 0:
+                                        if yoloClass_idss != 12:
+                                            if yoloClass_idss != 30 and yoloClass_idss != 31 and yoloClass_idss != 32:
+                                                yoloClass_idss = 12
+                                                print('??', yoloClass_idss)
+                                                sock.SendData(str(yoloClass_idss))
+                                                time.sleep(i + 1)
 
         indexes = cv2.dnn.NMSBoxes(boxes, confidences, 0.5, 0.4)
 
+    # class_id = 12일 때, 중복 detection 제거
     for i in range(0, len(class_ids)):
         if len(class_ids) != 0:
             yoloClass_ids.append(int(class_ids[0]))
@@ -271,24 +249,20 @@ while True:
                     time.sleep(i + 1)
             else:
                 if yoloClass_ids[j - 1] != yoloClass_ids[j]:
-                    # print(yoloClass_ids[j-1])
                     yoloClass_id.append(yoloClass_ids[j])
-                    # print(yoloClass_id)
-
                     for k in range(0, len(yoloClass_id)):
                         yol = len(yoloClass_id)
                         k += 1
-                    # print(yoloClass_id[yol-1])
                     yoloClass_idss = yoloClass_id[yol - 1]
-                    # yolo에서 검출한 class_id가 10이 아니라면, 그냥 class_id를 보냄
+                    # 검출한 class_id가 12가 아니라면, 그냥 class_id를 보냄
                     if yoloClass_idss != 12:
                         print("4여기")
                         print(yoloClass_idss)
                         sock.SendData(str(yoloClass_idss))
                         time.sleep(i + 1)
-
             j += 1
 
+    # bounding box 중복 제거
     font = cv2.FONT_HERSHEY_PLAIN
     for i in range(len(boxes)):
         if i in indexes:
@@ -297,7 +271,8 @@ while True:
             color = colors[i]
             cv2.rectangle(frame, (x, y), (x + w, y + h), color, 2)
             cv2.putText(frame, label, (x, y + 30), font, 3, color, 3)
-    cv2.imshow("YOLO_Image", frame)
+
+    cv2.imshow("YOLO_Detection", frame)
 
     if cv2.waitKey(1) > 0:
         break

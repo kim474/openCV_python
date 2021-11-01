@@ -57,7 +57,7 @@ output_layers = [layer_names[i[0] - 1] for i in net.getUnconnectedOutLayers()]
 colors = np.random.uniform(0, 255, size=(len(classes), 3))
 
 while True:
-    sock = U.UdpComms(udpIP="192.168.0.104", portTX=8000, portRX=8001, enableRX=True, suppressWarnings=True)
+    sock = U.UdpComms(udpIP="192.168.0.6", portTX=8000, portRX=8001, enableRX=True, suppressWarnings=True)
     ret, frame = cam.read()
     h, w, c = frame.shape
 
@@ -96,14 +96,20 @@ while True:
                 ids.append(class_id)
                 # print(ids)
 
-                if t2 >= timedelta(seconds=3):
+                if t2 >= timedelta(seconds=5):
                     # print(ids[k])
                     # yolo에서 검출한 class_id가 1이라면, 라즈베리로 신호 전달
                     if ids[k] == 1:
+                        print("height: ", dh)
+                        if dh < 240:
+                            sendData = "11"
+                        elif 240 < dh < 350:
+                            sendData = "12"
+                        elif 350 < dh:
+                            sendData = "13"
                         # 5. send "1"
-                        sendData = "1"
                         conn.sendall(sendData.encode())
-                        print('Send to Raspberry Pi---')
+                        print('Send to Raspberry Pi---', sendData)
 
                         # 6. receive class_id
                         recvData = conn.recv(1024)
